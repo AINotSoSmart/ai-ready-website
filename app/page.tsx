@@ -38,28 +38,28 @@ export default function StyleGuidePage() {
   const [showResults, setShowResults] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [analysisData, setAnalysisData] = useState<any>(null);
-  const [hasOpenAIKey, setHasOpenAIKey] = useState(false);
+  const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const [urlError, setUrlError] = useState<string>("");
-  
+
   // Check for API keys on mount
   useEffect(() => {
     fetch('/api/check-config')
       .then(res => res.json())
       .then(data => {
-        setHasOpenAIKey(data.hasOpenAIKey || false);
+        setHasGeminiKey(data.hasGeminiKey || false);
       })
-      .catch(() => setHasOpenAIKey(false));
+      .catch(() => setHasGeminiKey(false));
   }, []);
-  
+
   const handleAnalysis = async () => {
     if (!url) return;
-    
+
     // Auto-prepend https:// if no protocol is provided
     let processedUrl = url.trim();
     if (!processedUrl.match(/^https?:\/\//i)) {
       processedUrl = 'https://' + processedUrl;
     }
-    
+
     // Validate URL format
     try {
       const urlObj = new URL(processedUrl);
@@ -73,11 +73,11 @@ export default function StyleGuidePage() {
       setUrlError('Please enter a valid URL (e.g., example.com)');
       return;
     }
-    
+
     setIsAnalyzing(true);
     setShowResults(false);
     setAnalysisData(null);
-    
+
     try {
       // Start basic analysis
       const basicAnalysisPromise = fetch('/api/ai-readiness', {
@@ -87,14 +87,14 @@ export default function StyleGuidePage() {
         },
         body: JSON.stringify({ url: processedUrl }),
       });
-      
+
       // Disable automatic AI analysis for now - user will click button
       let aiAnalysisPromise = null;
-      
+
       // Wait for basic analysis
       const response = await basicAnalysisPromise;
       const data = await response.json();
-      
+
       if (data.success) {
         setAnalysisData({
           ...data,
@@ -121,23 +121,23 @@ export default function StyleGuidePage() {
       <div className="min-h-screen bg-background-base">
         {/* Header/Navigation Section */}
         <HeaderDropdownWrapper />
-        
+
         <div className="sticky top-0 left-0 w-full z-[101] bg-background-base header">
           <div className="absolute top-0 cmw-container border-x border-border-faint h-full pointer-events-none" />
-          
+
           <div className="h-1 bg-border-faint w-full left-0 -bottom-1 absolute" />
-          
+
           <div className="cmw-container absolute h-full pointer-events-none top-0">
             <Connector className="absolute -left-[10.5px] -bottom-11" />
             <Connector className="absolute -right-[10.5px] -bottom-11" />
           </div>
-          
+
           <HeaderWrapper>
             <div className="max-w-[900px] mx-auto w-full flex justify-between items-center">
               <div className="flex gap-24 items-center">
                 <HeaderBrandKit />
               </div>
-              
+
               <div className="flex gap-8">
                 {/* GitHub Template Button */}
                 <a
@@ -162,7 +162,7 @@ export default function StyleGuidePage() {
             <HeroFlame />
             <BackgroundOuterPiece />
             <HomeHeroBackground />
-            
+
             <AnimatePresence mode="wait">
               {!isAnalyzing && !showResults ? (
                 <motion.div
@@ -174,7 +174,7 @@ export default function StyleGuidePage() {
                 >
                   <HomeHeroBadge />
                   <HomeHeroTitle />
-                  
+
                   <p className="text-center text-body-large">
                     Analyze how AI-ready your webpage is from a single
                     <br className="lg-max:hidden" />
@@ -214,10 +214,10 @@ export default function StyleGuidePage() {
               )}
             </AnimatePresence>
           </div>
-          
+
           {/* Mini Playground Input - Only show when not analyzing */}
           {!isAnalyzing && !showResults && (
-            <motion.div 
+            <motion.div
               className="container lg:contents !p-16 relative -mt-90"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -225,12 +225,12 @@ export default function StyleGuidePage() {
             >
               <div className="absolute top-0 left-[calc(50%-50vw)] w-screen h-1 bg-border-faint lg:hidden" />
               <div className="absolute bottom-0 left-[calc(50%-50vw)] w-screen h-1 bg-border-faint lg:hidden" />
-              
+
               <Connector className="-top-10 -left-[10.5px] lg:hidden" />
               <Connector className="-top-10 -right-[10.5px] lg:hidden" />
               <Connector className="-bottom-10 -left-[10.5px] lg:hidden" />
               <Connector className="-bottom-10 -right-[10.5px] lg:hidden" />
-              
+
               {/* Hero Input Component */}
               <div className="max-w-552 mx-auto w-full relative z-[11] lg:z-[2] rounded-20 -mt-30 lg:-mt-30">
                 <div
@@ -240,10 +240,10 @@ export default function StyleGuidePage() {
                       "0px 0px 44px 0px rgba(0, 0, 0, 0.02), 0px 88px 56px -20px rgba(0, 0, 0, 0.03), 0px 56px 56px -20px rgba(0, 0, 0, 0.02), 0px 32px 32px -20px rgba(0, 0, 0, 0.03), 0px 16px 24px -12px rgba(0, 0, 0, 0.03), 0px 0px 0px 1px rgba(0, 0, 0, 0.05), 0px 0px 0px 10px #F9F9F9",
                   }}
                 />
-                
+
                 <div className="p-16 flex gap-12 items-center w-full relative">
                   <Globe />
-                  
+
                   <input
                     className={`flex-1 bg-transparent text-body-input text-accent-black placeholder:text-black-alpha-48 focus:outline-none focus:ring-0 focus:border-transparent ${urlError ? 'text-heat-200' : ''}`}
                     placeholder="example.com"
@@ -262,7 +262,7 @@ export default function StyleGuidePage() {
                       }
                     }}
                   />
-                  
+
                   <div
                     onClick={(e) => {
                       e.preventDefault();
@@ -274,7 +274,7 @@ export default function StyleGuidePage() {
                     <HeroInputSubmitButton dirty={url.length > 0} tab={tab} />
                   </div>
                 </div>
-                
+
                 {/* Error message */}
                 {urlError && (
                   <motion.div
@@ -285,12 +285,12 @@ export default function StyleGuidePage() {
                     {urlError}
                   </motion.div>
                 )}
-                
+
                 <div className="h-248 top-84 cw-768 pointer-events-none absolute overflow-clip -z-10">
                   <AsciiExplosion className="-top-200" />
                 </div>
               </div>
-              
+
               {/* Hero Scraping Animation */}
               <HeroScraping />
             </motion.div>

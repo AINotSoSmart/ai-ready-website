@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY!,
 });
 
 interface AIAnalysisRequest {
@@ -11,29 +11,22 @@ interface AIAnalysisRequest {
   currentChecks: any[];
 }
 
-async function generateAIInsights(url: string, htmlContent: string, currentChecks: any[]) {
-  // Try Groq first since OpenAI has quota issues
-  return generateGroqInsights(url, htmlContent, currentChecks);
-}
-
-async function generateGroqInsights(url: string, htmlContent: string, currentChecks: any[]) {
+async function generateGeminiInsights(url: string, htmlContent: string, currentChecks: any[]) {
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
+    const config = {
+      thinkingConfig: {
+        thinkingBudget: 0,
       },
-      body: JSON.stringify({
-        model: 'moonshotai/kimi-k2-instruct',
-        messages: [
+    };
+
+    const contents = [
+      {
+        role: 'user' as const,
+        parts: [
           {
-            role: 'system',
-            content: 'You are an AI readiness expert analyzing websites for ANY industry (e-commerce, news, education, healthcare, business, etc). Provide industry-appropriate recommendations. Be specific with examples relevant to the site type.'
-          },
-          {
-            role: 'user',
-            content: `Analyze this webpage for AI readiness. This could be ANY type of site - adapt your analysis accordingly.
+            text: `You are an AI readiness expert analyzing websites for ANY industry (e-commerce, news, education, healthcare, business, etc). Provide industry-appropriate recommendations. Be specific with examples relevant to the site type.
+
+Analyze this webpage for AI readiness. This could be ANY type of site - adapt your analysis accordingly.
 
 URL: ${url}
 Page-Level Scores: ${JSON.stringify(currentChecks.filter(c => ['readability', 'heading-structure', 'meta-tags'].includes(c.id)).map(c => c.label + ': ' + c.score))}
@@ -49,33 +42,35 @@ Analyze these universal AI readiness factors:
 8. Machine Interpretability (machine-interpretability) - How easily can AI parse and understand this?
 
 Adapt your analysis to the site type (e-commerce should focus on product data, news on article structure, etc).
-Return JSON with insights array containing {id, label, score(0-100), status(pass/warning/fail), details, recommendation, actionItems(array of 5 specific actions)} for each area.`
-          }
+Return JSON with insights array containing {id, label, score(0-100), status(pass/warning/fail), details, recommendation, actionItems(array of 5 specific actions)} for each area.
+
+IMPORTANT: Return ONLY valid JSON, no markdown code blocks or other text.`,
+          },
         ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
+      },
+    ];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-lite',
+      config,
+      contents,
     });
 
-    const data = await response.json();
-    if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-      let content = data.choices[0].message.content;
-      // Remove markdown code blocks if present
-      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      try {
-        return JSON.parse(content);
-      } catch (parseError) {
-        console.error('Failed to parse Groq response:', parseError);
-        console.log('Raw content:', content.substring(0, 200));
-        return generateMockInsights(url);
-      }
-    } else {
-      console.error('Invalid Groq response format:', data);
+    const content = response.text || '';
+
+    // Remove markdown code blocks if present
+    const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    try {
+      return JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.error('Failed to parse Gemini response:', parseError);
+      console.log('Raw content:', cleanedContent.substring(0, 200));
       return generateMockInsights(url);
     }
   } catch (error) {
-    console.error('Groq API error:', error);
-    // Return mock data if both APIs fail
+    console.error('Gemini API error:', error);
+    // Return mock data if API fails
     return generateMockInsights(url);
   }
 }
@@ -135,7 +130,7 @@ function generateMockInsights(url: string = 'https://example.com') {
         recommendation: 'Good informational value. Add more examples to make it even better for AI training.',
         actionItems: [
           'Add a real example: "For instance, when implementing auth, you might encounter error 401..."',
-          'Include code snippets: ```js\nconst auth = await authenticate(user);\n// Handle response...\n```',
+          'Include code snippets: ```js\\nconst auth = await authenticate(user);\\n// Handle response...\\n```',
           'Create comparison tables: <table><tr><th>Method</th><th>Pros</th><th>Cons</th></tr>...</table>',
           'Add "Common Pitfalls" sections with specific scenarios',
           'Link to authoritative sources: "According to [MDN Web Docs](https://developer.mozilla.org)..."'
@@ -214,20 +209,20 @@ function generateMockInsights(url: string = 'https://example.com') {
 export async function POST(request: NextRequest) {
   try {
     const { url, htmlContent, currentChecks } = await request.json();
-    
+
     if (!url || !htmlContent) {
       return NextResponse.json({ error: 'URL and HTML content are required' }, { status: 400 });
     }
-    
-    const insights = await generateAIInsights(url, htmlContent, currentChecks || []);
-    
+
+    const insights = await generateGeminiInsights(url, htmlContent, currentChecks || []);
+
     return NextResponse.json({
       success: true,
       insights: insights.insights || [],
       overallAIReadiness: insights.overallAIReadiness || '',
       topPriorities: insights.topPriorities || []
     });
-    
+
   } catch (error) {
     console.error('AI Analysis error:', error);
     // Return mock data on error, using the url from request if available
