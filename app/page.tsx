@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Import shared components
-import Button from "@/components/shared/button/Button";
 import { Connector } from "@/components/shared/layout/curvy-rect";
 import HeroFlame from "@/components/shared/effects/flame/hero-flame";
 import AsciiExplosion from "@/components/shared/effects/flame/ascii-explosion";
@@ -14,15 +13,12 @@ import { HeaderProvider } from "@/components/shared/header/HeaderContext";
 // Import hero section components
 import HomeHeroBackground from "@/components/app/(home)/sections/hero/Background/Background";
 import { BackgroundOuterPiece } from "@/components/app/(home)/sections/hero/Background/BackgroundOuterPiece";
-import HomeHeroBadge from "@/components/app/(home)/sections/hero/Badge/Badge";
 import HomeHeroPixi from "@/components/app/(home)/sections/hero/Pixi/Pixi";
-import HomeHeroTitle from "@/components/app/(home)/sections/hero/Title/Title";
 import HeroInputSubmitButton from "@/components/app/(home)/sections/hero-input/Button/Button";
 import Globe from "@/components/app/(home)/sections/hero-input/_svg/Globe";
 import HeroScraping from "@/components/app/(home)/sections/hero-scraping/HeroScraping";
 import { Endpoint } from "@/components/shared/Playground/Context/types";
-import InlineResults from "@/components/app/(home)/sections/ai-readiness/InlineResults";
-import ControlPanel from "@/components/app/(home)/sections/ai-readiness/ControlPanel";
+import VisibilityPanel from "@/components/app/(home)/sections/llm-visibility/VisibilityPanel";
 
 // Import header components
 import HeaderBrandKit from "@/components/shared/header/BrandKit/BrandKit";
@@ -31,24 +27,32 @@ import HeaderDropdownWrapper from "@/components/shared/header/Dropdown/Wrapper/W
 import GithubIcon from "@/components/shared/header/Github/_svg/GithubIcon";
 import ButtonUI from "@/components/ui/shadcn/button";
 
-export default function StyleGuidePage() {
+// Import visibility types
+import { VisibilityReport } from "@/lib/visibility-analyzer";
+
+// Import icons
+import { Eye, Sparkles, Loader2, Bot } from "lucide-react";
+
+// VisibilityReport from visibility-analyzer is used directly
+
+export default function LLMVisibilityPage() {
   const [tab, setTab] = useState<Endpoint>(Endpoint.Scrape);
   const [url, setUrl] = useState<string>("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState(0);
-  const [analysisData, setAnalysisData] = useState<any>(null);
-  const [hasGeminiKey, setHasGeminiKey] = useState(false);
+  const [visibilityData, setVisibilityData] = useState<VisibilityReport | null>(null);
+  const [hasOpenRouterKey, setHasOpenRouterKey] = useState(false);
   const [urlError, setUrlError] = useState<string>("");
+  const [analysisStatus, setAnalysisStatus] = useState("");
 
   // Check for API keys on mount
   useEffect(() => {
     fetch('/api/check-config')
       .then(res => res.json())
       .then(data => {
-        setHasGeminiKey(data.hasGeminiKey || false);
+        setHasOpenRouterKey(data.hasOpenRouterKey || false);
       })
-      .catch(() => setHasGeminiKey(false));
+      .catch(() => setHasOpenRouterKey(false));
   }, []);
 
   const handleAnalysis = async () => {
@@ -63,24 +67,23 @@ export default function StyleGuidePage() {
     // Validate URL format
     try {
       const urlObj = new URL(processedUrl);
-      // Check if it's http or https
       if (!['http:', 'https:'].includes(urlObj.protocol)) {
         setUrlError('Please enter a valid URL (e.g., example.com)');
         return;
       }
     } catch (error) {
-      // If URL constructor throws, it's not a valid URL
       setUrlError('Please enter a valid URL (e.g., example.com)');
       return;
     }
 
     setIsAnalyzing(true);
     setShowResults(false);
-    setAnalysisData(null);
+    setVisibilityData(null);
+    setAnalysisStatus("Extracting brand information...");
 
     try {
-      // Start basic analysis
-      const basicAnalysisPromise = fetch('/api/ai-readiness', {
+      // Call the LLM visibility API
+      const response = await fetch('/api/llm-visibility', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,31 +91,22 @@ export default function StyleGuidePage() {
         body: JSON.stringify({ url: processedUrl }),
       });
 
-      // Disable automatic AI analysis for now - user will click button
-      let aiAnalysisPromise = null;
-
-      // Wait for basic analysis
-      const response = await basicAnalysisPromise;
       const data = await response.json();
 
       if (data.success) {
-        setAnalysisData({
-          ...data,
-          aiAnalysisPromise: null, // No auto AI analysis
-          hasOpenAIKey: false, // Disable auto AI
-          autoStartAI: false // Don't auto-start
-        });
+        // Set the full visibility report
+        setVisibilityData(data as VisibilityReport);
         setIsAnalyzing(false);
         setShowResults(true);
       } else {
         console.error('Analysis failed:', data.error);
         setIsAnalyzing(false);
-        alert('Failed to analyze website. Please check the URL and try again.');
+        alert(data.error || 'Failed to analyze brand visibility. Please try again.');
       }
     } catch (error) {
       console.error('Analysis error:', error);
       setIsAnalyzing(false);
-      alert('An error occurred while analyzing the website.');
+      alert('An error occurred while analyzing visibility.');
     }
   };
 
@@ -157,7 +151,7 @@ export default function StyleGuidePage() {
 
         {/* Hero Section */}
         <section className="overflow-x-clip" id="home-hero">
-          <div className={`pt-28 lg:pt-254 lg:-mt-100 pb-115 relative ${isAnalyzing || showResults ? '' : ''}`} id="hero-content">
+          <div className={`pt-28 lg:pt-254 lg:-mt-100 pb-115 relative`} id="hero-content">
             <HomeHeroPixi />
             <HeroFlame />
             <BackgroundOuterPiece />
@@ -172,44 +166,83 @@ export default function StyleGuidePage() {
                   transition={{ duration: 0.5 }}
                   className="relative container px-16"
                 >
-                  <HomeHeroBadge />
-                  <HomeHeroTitle />
+                  {/* Custom Badge */}
+                  <div className="flex justify-center mb-16">
+                    <div className="inline-flex items-center gap-8 px-12 py-6 bg-heat-4 border border-heat-100 border-opacity-20 rounded-full">
+                      <Eye className="w-14 h-14 text-heat-100" />
+                      <span className="text-label-small text-heat-100 font-medium">
+                        LLM Visibility Checker
+                      </span>
+                    </div>
+                  </div>
 
-                  <p className="text-center text-body-large">
-                    Analyze how AI-ready your webpage is from a single
-                    <br className="lg-max:hidden" />
-                    page snapshot. High-signal metrics for LLM compatibility.
+                  {/* Title */}
+                  <h1 className="text-title-h1 text-center text-accent-black mb-16">
+                    Is Your Brand Visible<br />
+                    <span className="text-heat-100">in AI Answers?</span>
+                  </h1>
+
+                  <p className="text-center text-body-large text-black-alpha-64 max-w-500 mx-auto">
+                    Check if ChatGPT, Claude, Gemini, Perplexity and other LLMs
+                    mention your brand when users ask relevant questions.
                   </p>
+
                   <Link
-                    className="bg-black-alpha-4 hover:bg-black-alpha-6 rounded-6 px-8 lg:px-6 text-label-large h-30 lg:h-24 block mt-8 mx-auto w-max gap-4 transition-all"
+                    className="bg-black-alpha-4 hover:bg-black-alpha-6 rounded-6 px-8 lg:px-6 text-label-large h-30 lg:h-24 flex items-center mt-12 mx-auto w-max gap-6 transition-all"
                     href="#"
                     onClick={(e) => e.preventDefault()}
                   >
-                    Powered by Firecrawl.
+                    <Sparkles className="w-14 h-14 text-heat-100" />
+                    Powered by FlipAEO
                   </Link>
+                </motion.div>
+              ) : isAnalyzing ? (
+                <motion.div
+                  key="analyzing"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="relative container px-16 text-center"
+                >
+                  <div className="flex flex-col items-center gap-24">
+                    <div className="relative">
+                      <Loader2 className="w-48 h-48 text-heat-100 animate-spin" />
+                      <Bot className="w-24 h-24 text-heat-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <div>
+                      <h2 className="text-title-h2 text-accent-black mb-8">
+                        Checking LLM Visibility
+                      </h2>
+                      <p className="text-body-large text-black-alpha-64">
+                        Querying ChatGPT, Claude, Gemini, Grok, and Mistral...
+                      </p>
+                      <p className="text-label-small text-heat-100 mt-8">
+                        {analysisStatus}
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div
-                  key="control-panel"
+                  key="results"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                   className="relative container px-16"
                   style={{ marginTop: '-35px' }}
                 >
-                  <ControlPanel
-                    isAnalyzing={isAnalyzing}
-                    showResults={showResults}
-                    url={url}
-                    analysisData={analysisData}
-                    onReset={() => {
-                      setIsAnalyzing(false);
-                      setShowResults(false);
-                      setAnalysisStep(0);
-                      setAnalysisData(null);
-                      setUrl("");
-                    }}
-                  />
+                  {visibilityData && (
+                    <VisibilityPanel
+                      report={visibilityData}
+                      onReset={() => {
+                        setIsAnalyzing(false);
+                        setShowResults(false);
+                        setVisibilityData(null);
+                        setUrl("");
+                      }}
+                    />
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -246,13 +279,12 @@ export default function StyleGuidePage() {
 
                   <input
                     className={`flex-1 bg-transparent text-body-input text-accent-black placeholder:text-black-alpha-48 focus:outline-none focus:ring-0 focus:border-transparent ${urlError ? 'text-heat-200' : ''}`}
-                    placeholder="example.com"
+                    placeholder="Enter your brand website (e.g., stripe.com)"
                     type="text"
                     value={url}
                     onChange={(e) => {
                       const newUrl = e.target.value;
                       setUrl(newUrl);
-                      // Clear error when user starts typing
                       if (urlError) setUrlError("");
                     }}
                     onKeyDown={(e) => {
