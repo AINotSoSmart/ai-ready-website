@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { VisibilityResult } from "@/lib/visibility-analyzer";
+import { VisibilityReport } from "@/lib/visibility-analyzer";
 import {
     CheckCircle2,
     XCircle,
@@ -16,7 +16,7 @@ import {
 import { useState } from "react";
 
 interface LLMCardProps {
-    result: VisibilityResult;
+    result: VisibilityReport;
     index: number;
 }
 
