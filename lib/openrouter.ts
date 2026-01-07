@@ -5,7 +5,7 @@
 
 export const LLM_MODELS = {
     chatgpt: {
-        id: 'openai/gpt-4o:online',
+        id: 'openai/gpt-4o-mini:online',
         label: 'ChatGPT',
         icon: '🤖',
         color: '#10a37f'
@@ -17,7 +17,7 @@ export const LLM_MODELS = {
         color: '#cc785c'
     },
     gemini: {
-        id: 'google/gemini-2.5-pro-preview:online',
+        id: 'google/gemini-2.0-flash:online',
         label: 'Gemini',
         icon: '✨',
         color: '#4285f4'
@@ -28,9 +28,9 @@ export const LLM_MODELS = {
         icon: '🚀',
         color: '#000000'
     },
-    mistral: {
-        id: 'mistralai/devstral-2512:online',
-        label: 'Mistral',
+    perplexity: {
+        id: 'perplexity/sonar',
+        label: 'Perplexity',
         icon: '🌪️',
         color: '#ff7000'
     }

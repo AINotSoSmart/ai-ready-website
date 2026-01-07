@@ -215,7 +215,7 @@ export default function LLMVisibilityPage() {
                         Checking LLM Visibility
                       </h2>
                       <p className="text-body-large text-black-alpha-64">
-                        Querying ChatGPT, Claude, Gemini, Grok, and Mistral...
+                        Querying ChatGPT, Claude, Gemini, Grok, and Perplexity...
                       </p>
                       <p className="text-label-small text-heat-100 mt-8">
                         {analysisStatus}
