@@ -11,22 +11,16 @@ export const LLM_MODELS = {
         color: '#10a37f'
     },
     claude: {
-        id: 'anthropic/claude-3.5-sonnet:online',
+        id: 'anthropic/claude-3.5-haiku:online',
         label: 'Claude',
         icon: '🧠',
         color: '#cc785c'
     },
     gemini: {
-        id: 'google/gemini-2.0-flash:online',
+        id: 'google/gemini-2.0-flash-001:online',
         label: 'Gemini',
         icon: '✨',
         color: '#4285f4'
-    },
-    grok: {
-        id: 'x-ai/grok-4.1-fast:online',
-        label: 'Grok',
-        icon: '🚀',
-        color: '#000000'
     },
     perplexity: {
         id: 'perplexity/sonar',
